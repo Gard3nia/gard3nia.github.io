@@ -1,0 +1,226 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unconstrained Delegation Attack In The Domain | Gard3nia's Blog</title><meta name="description" content="Definition在Windows 2000 Server首次发布Active Directory时，必须提供一种简单的机制来支持用户通过Kerberos向Web Server进行身份验证并需要代表该用户更新后端数据库服务器上的记录的方案。这通常称为“ Kerberos双跳问题”，并且要求进行委派，以便Web Server在修改数据库记录时模拟用户。 域委派：是大型网络中经常部署的应用模式，是指"><meta name="keywords" content="Windows,内网渗透,Kerberos,Delegation"><meta name="author" content="Gard3nia"><meta name="copyright" content="Gard3nia"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://gard3nia.top/2022/05/15/Delegation-Attack/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><meta name="google-site-verification" content="BFoiCjZGmn_71sWuDYx-7UEM26kH7ZsjecUFZ3_wabE"/><meta name="baidu-site-verification" content="code-QZLPYYwqlz"/><meta property="og:type" content="article"><meta property="og:title" content="Unconstrained Delegation Attack In The Domain"><meta property="og:url" content="https://gard3nia.top/2022/05/15/Delegation-Attack/"><meta property="og:site_name" content="Gard3nia's Blog"><meta property="og:description" content="Definition在Windows 2000 Server首次发布Active Directory时，必须提供一种简单的机制来支持用户通过Kerberos向Web Server进行身份验证并需要代表该用户更新后端数据库服务器上的记录的方案。这通常称为“ Kerberos双跳问题”，并且要求进行委派，以便Web Server在修改数据库记录时模拟用户。 域委派：是大型网络中经常部署的应用模式，是指"><meta property="og:image" content="https://s1.ax1x.com/2022/05/18/OIr8lq.png"><meta property="article:published_time" content="2022-05-15T02:26:05.000Z"><meta property="article:modified_time" content="2022-05-17T17:17:15.772Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.2.0',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: true,
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2022-05-18 01:17:15'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="https://z3.ax1x.com/2021/11/13/Isj3rT.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">19</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">20</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">8</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Definition"><span class="toc-number">1.</span> <span class="toc-text">Definition</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Unconstrained-Delegation"><span class="toc-number">2.</span> <span class="toc-text">Unconstrained Delegation</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Attack-To-Unconstrained-Delegation"><span class="toc-number">3.</span> <span class="toc-text">Attack To Unconstrained Delegation</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Spooler-Printer-Bug-Unconstrained-Delegation"><span class="toc-number">4.</span> <span class="toc-text">Spooler Printer Bug + Unconstrained Delegation</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Reference"><span class="toc-number">5.</span> <span class="toc-text">Reference</span></a></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(https://s1.ax1x.com/2022/05/18/OIr8lq.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Gard3nia's Blog</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">Unconstrained Delegation Attack In The Domain</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-05-15T02:26:05.000Z" title="发表于 2022-05-15 10:26:05">2022-05-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-05-17T17:17:15.772Z" title="更新于 2022-05-18 01:17:15">2022-05-18</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/">内网渗透</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h1 id="Definition"><a href="#Definition" class="headerlink" title="Definition"></a>Definition</h1><p>在Windows 2000 Server首次发布Active Directory时，必须提供一种简单的机制来支持用户通过Kerberos向Web Server进行身份验证并需要代表该用户更新后端数据库服务器上的记录的方案。这通常称为“ Kerberos双跳问题”，并且要求进行委派，以便Web Server在修改数据库记录时模拟用户。</p>
+<p>域委派：是大型网络中经常部署的应用模式，是指将域内用户的权限委派给服务账号（注册了SPN），使得服务账号可以以域内用户的身份在域内工作，简单来说Delegation解决了一个什么问题？可以让域内的B服务可以代理A服务去访问C服务，A使用Kerberos身份验证访问B，B再利用A的身份去请求域里的C服务（A需要有访问C的权限），给多跳认证带来很大便利，也带来很大的安全隐患，攻击者可以利用委派获取域管理员权限，制作隐藏后门等。</p>
+<p>服务账号(Service Account)：域内用户的一种类型，服务器运行服务时所用的账号，将服务运行起来并加入域。例如<code>MS SQL Server</code>在安装时，会在域内自动注册服务账号<code>SqlServiceAccount</code>，这类账号不能用于交互式登录，也就是说无法通过<code>SqlServiceAccount</code>来通过3389进行rdp登录</p>
+<p>Kerberos委派主要分为三个类别：</p>
+<ul>
+<li>Unconstrained Delegation</li>
+<li>Constrained Delegation</li>
+<li>Resource-Based Constrained Delegation</li>
+</ul>
+<h1 id="Unconstrained-Delegation"><a href="#Unconstrained-Delegation" class="headerlink" title="Unconstrained Delegation"></a>Unconstrained Delegation</h1><p>非约束性委派（Unconstrained Delegation），用户想访问服务A，向KDC提交认证，KDC发现A是非约束性委派，会把TGT放在ST中一并给用户。然后用户用这个ST去访问服务A，服务A就相当于获得了用户的TGT，把TGT放入<code>lsass</code>进程，然后就可以拿着用户的TGT以用户的身份去访问该用户权限能够访问的服务了。</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrU7F.png" alt="OIrU7F.png"></p>
+<p>过程：</p>
+<ol>
+<li>用户向KDC发起认证请求</li>
+<li>KDC返回属于用户的TGT</li>
+<li>用户利用申请到的TGT向KDC申请一个可用于转发的TGT‘</li>
+<li>KDC返回属于用户的可以用于转发的TGT’</li>
+<li>用户利用自己的TGT向KDC申请Service1的ST1</li>
+<li>KDC返回ST1</li>
+<li>用户利用ST1访问Service1，请求过程中将用于转发的TGT‘以及TGT’的session key一起发送</li>
+<li>为了满足用户的请求，Service1需要代替用户访问Service2，这时候Service1将TGT‘以及session key加密的时间戳等信息发送给KDC，以用户名义请求Service2的ST2</li>
+<li>KDC验证通过后，签发ST2凭证，并将服务 1 可以使用的会话密钥server session key一起发送给Service1</li>
+<li>Service1拿着签发的ST2凭证向Service2发起请求</li>
+<li>Service2验证并响应</li>
+<li>Service1响应用户（步骤7）</li>
+</ol>
+<p>这个过程中就存在一个问题：TGT’是不会被限制的，Service1可以拿着它肆意妄为，以用户的身份去访问任意想访问的服务，攻击就是利用这一点，诱导高权限账户访问后，拿着高权限账户的TGT去获取权限。</p>
+<h1 id="Attack-To-Unconstrained-Delegation"><a href="#Attack-To-Unconstrained-Delegation" class="headerlink" title="Attack To Unconstrained Delegation"></a>Attack To Unconstrained Delegation</h1><p>环境：</p>
+<ul>
+<li>DC 10.10.10.10 域管adminisrators</li>
+<li>WEB 10.10.10.80 本地管理员gard3nia</li>
+</ul>
+<p>在DC上设置非约束委派</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIr0h9.png" alt="OIr0h9.png"></p>
+<p>设置好以后在DC的ADSI编辑器中查询，主机WEB的userAccountControl，当服务账号或者主机被设置为非约束性委派时，其<strong>userAccountControl</strong>属性会包含<code>TRUSTED_FOR_DELEGATION</code></p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrr11.png" alt="OIrr11.png"></p>
+<p>当前：WORKSTATION_TRUST_ACCOUNT(4096)+TRUSTED_FOR_DELEGATION(524288)=528384</p>
+<p>如果设置了服务账号：NORMAL_ACCOUNT(512)+DONT_EXPIRE_PASSWORD(65536)=66048</p>
+<p>通过这个524288数值我们就可以知道怎么去查找存在非约束的主机账户或者服务账号了，在域内可以使用adfind.exe来查找设置了非约束委派的主机，还有很多工具可以用来查询，比如：powerview和ldapsearch等</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">AdFind.exe <span class="literal">-b</span> <span class="string">&quot;DC=de1ay,DC=com&quot;</span> <span class="operator">-f</span> <span class="string">&quot;(&amp;(samAccountType=805306369)(userAccountControl:1.2.840.113556.1.4.803:=524288))&quot;</span> cn distinguishedName</span><br></pre></td></tr></table></figure>
+
+<p>域控默认设置为非约束委派，除DC外还查询到刚刚设置的WEB账户</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrg0O.png" alt="OIrg0O.png"></p>
+<p>假设我们这时候已经拿下了WEB这台机子，并可以本地提权到administrator，发现本机还设置了约束委派，那就可以诱导域管来访问WEB这台主机，窃取他的可转发的TGT来进行域内身份伪造拿下DC，当前主机内存中无任何票据，且无权限访问DC</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrhhd.png" alt="OIrhhd.png"></p>
+<p>使用域管访问设置了非约束委派的主机WEB</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrbB8.png" alt="OIrbB8.png"></p>
+<p>返回WEB主机klist列出票据信息，已有域管发来的一些票据信息</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrOAg.png" alt="OIrOAg.png"></p>
+<p>mimikatz导出这些票据</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">privilege::debug </span><br><span class="line">sekurlsa::tickets /<span class="built_in">export</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s1.ax1x.com/2022/05/18/OIrXNQ.png" alt="OIrXNQ.png"></p>
+<p>可以看到，此时我们已经抓到了域administrator的票据（TGT），此时我们需要的操作就是，将其导入到当前主机的内存中，即可直接获取域管权限，拿mimikatz导入内存即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kerberos::ptt administrator@krbtgt-xxxxxxxxxxxxxxxx</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s1.ax1x.com/2022/05/18/OIskEF.png" alt="OIskEF.png"></p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIsE4J.png" alt="OIsE4J.png"></p>
+<p>拿到CIFS服务了，拿shell或者执行命令也就很简单，直接上psexec即可</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIsJCd.png" alt="OIsJCd.png"></p>
+<p>也可以直接mimikatz利用DCSync读取域控的hash</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIsNvt.png" alt="OIsNvt.png"></p>
+<h1 id="Spooler-Printer-Bug-Unconstrained-Delegation"><a href="#Spooler-Printer-Bug-Unconstrained-Delegation" class="headerlink" title="Spooler Printer Bug + Unconstrained Delegation"></a>Spooler Printer Bug + Unconstrained Delegation</h1><p>非约束委派攻击的最重要的一点就是：需要诱导域管去访问设置了非约束委派的机器，但是在真实内网渗透场景中，这基本上很难实现，除非你是拿到了一些特殊服务，比如Web服务器这种…</p>
+<p>PrintBug: Windows打印系统远程协议（MS-RPRN）中的一种旧的，但是默认启用的方法RpcRemoteFindFirstPrinterChangeNotification（Ex）强制运行了spooler服务的计算机可以通过kerberos或者ntlm对攻击者选择的目标进行身份验证。任何经过身份验证的域用户都可以远程连接到DC的打印服务，并请求更新新的打印作业，DC 将立即测试该连接，暴露 DC 计算机帐户的凭据。</p>
+<p>这时候有个比较巧妙的思路就是利用域控或者其他服务器上的spooler服务去主动访问我们的主机，这时候由于我们的主机设置了非约束委派，所以就会在lsass进程中留下DC的票据TGT信息，我们只需要抓取并将其内存即可拿到域控权限，或者其他主机权限。</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIsdDf.png" alt="OIsdDf.png"></p>
+<p>两个工具：Rubeus、SpoolSample</p>
+<p>Rubeus在本地管理员运行，因为要读取系统记录日志。</p>
+<p>SpoolSample在域用户下运行，要不然你无法使用MS-RPRN协议进行通信。</p>
+<p>环境：gard3nia.site域内</p>
+<ul>
+<li>12server-dc 域控 开启打印机服务</li>
+<li>12server-01 域内成员机     本地管理员s01-01  </li>
+<li>12server-02 域内成员机     域内普通用户002</li>
+</ul>
+<p>验证域控spoolss服务开启</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIsTPJ.png" alt="OIsTPJ.png"></p>
+<p>在12server-01主机上清空票据，保证不能访问域控，不能使用Dcsync</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIsbx1.png" alt="OIsbx1.png"></p>
+<p>用本地管理员s01-01用户启动Rubeus监听模式，监听12server-dc$主机用户的动作</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyPxI.png" alt="OIyPxI.png"></p>
+<p>使用域内普通账户002在12server-02触发打印机bug，让12server-dc向12server-01发起请求</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyuGj.png" alt="OIyuGj.png"></p>
+<p>在12server-01上捕获12server-dc$用户的TGT（base64编码了）</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyKRs.png" alt="OIyKRs.png"></p>
+<p>使用rubeus将TGT注入内存</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.\Rubeus.exe ptt /ticket:base64tgt</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyNi4.png" alt="OIyNi4.png"></p>
+<p>此时再使用mimikatz的DCSync读取域控hash，可以直接读取成功</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lsadump::dcsync /domain:gard3nia.site /all /csv</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyaW9.png" alt="OIyaW9.png"></p>
+<p>拿到域管和krbtgt的hash了，可以直接做hash传递，也可以做黄金票据伪造，这里选择伪造下金票</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIy0Q1.png" alt="OIy0Q1.png"></p>
+<p>伪造金票后可以直接访问CIFS服务（前后对比）</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyBsx.png" alt="OIyBsx.png"></p>
+<p>理所应当，伪造金票后也可以直接psexec拿下域控</p>
+<p><img src="https://s1.ax1x.com/2022/05/18/OIyseK.png" alt="OIyseK.png"></p>
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><p>1.<a target="_blank" rel="noopener" href="https://medium.com/@riccardo.ancarani94/exploiting-unconstrained-delegation-a81eabbd6976">https://medium.com/@riccardo.ancarani94/exploiting-unconstrained-delegation-a81eabbd6976</a></p>
+<p>2.<a target="_blank" rel="noopener" href="https://xxe.icu/posts/ad_delegation/">https://xxe.icu/posts/ad_delegation/</a></p>
+<p>3.<a target="_blank" rel="noopener" href="https://shu1l.github.io/2020/08/05/kerberos-yu-wei-pai-gong-ji-xue-xi/">https://shu1l.github.io/2020/08/05/kerberos-yu-wei-pai-gong-ji-xue-xi/</a></p>
+<p>4.<a target="_blank" rel="noopener" href="https://3nd.xyz/post/2021-01-18-ad-kerberos-delegation-md">https://3nd.xyz/post/2021-01-18-ad-kerberos-delegation-md</a></p>
+<p>5.<a target="_blank" rel="noopener" href="https://www.ired.team/offensive-security-experiments/active-directory-kerberos-abuse/domain-compromise-via-dc-print-server-and-kerberos-delegation">https://www.ired.team/offensive-security-experiments/active-directory-kerberos-abuse/domain-compromise-via-dc-print-server-and-kerberos-delegation</a></p>
+<p>6.<a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7217">https://xz.aliyun.com/t/7217</a></p>
+</div><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Gard3nia</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://gard3nia.top/2022/05/15/Delegation-Attack/">https://gard3nia.top/2022/05/15/Delegation-Attack/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://gard3nia.top" target="_blank">Gard3nia's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Windows/">Windows</a><a class="post-meta__tags" href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/">内网渗透</a><a class="post-meta__tags" href="/tags/Kerberos/">Kerberos</a><a class="post-meta__tags" href="/tags/Delegation/">Delegation</a></div><div class="post_share"><div class="social-share" data-image="https://s1.ax1x.com/2022/05/18/OIr8lq.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wx.png" target="_blank"><img class="post-qr-code-img" src="/img/wx.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/zfb.jpg" target="_blank"><img class="post-qr-code-img" src="/img/zfb.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2022/04/05/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83-Windows%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/"><img class="next-cover" src="https://s1.ax1x.com/2022/04/07/LSoSQH.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">内网渗透从入门到放弃--Windows本地权限提升</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2022/03/13/内网渗透从入门到放弃-Windows域认证/" title="内网渗透从入门到放弃--Windows域认证&Kerberos协议"><img class="cover" src="https://s3.bmp.ovh/imgs/2022/03/2b4b3d1a58f55162.jpg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-03-13</div><div class="title">内网渗透从入门到放弃--Windows域认证&Kerberos协议</div></div></a></div><div><a href="/2022/03/12/内网渗透从入门到放弃--Windows本地与网络认证/" title="内网渗透从入门到放弃--Windows本地与网络认证&NTLM协议"><img class="cover" src="https://s3.bmp.ovh/imgs/2022/03/24422db3a8eb6421.jpg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-03-12</div><div class="title">内网渗透从入门到放弃--Windows本地与网络认证&NTLM协议</div></div></a></div><div><a href="/2022/03/19/内网渗透从入门到放弃-内网信息收集/" title="内网渗透从入门到放弃--内网信息收集"><img class="cover" src="https://s2.loli.net/2022/03/30/aVGdUuktz74EHc2.jpg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-03-19</div><div class="title">内网渗透从入门到放弃--内网信息收集</div></div></a></div><div><a href="/2022/03/29/内网渗透从入门到放弃-端口转发与隧道技术/" title="内网渗透从入门到放弃-端口转发与隧道技术"><img class="cover" src="https://s2.loli.net/2022/03/30/ATLoyIlWEsXgVc4.jpg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-03-29</div><div class="title">内网渗透从入门到放弃-端口转发与隧道技术</div></div></a></div><div><a href="/2022/04/05/内网渗透从入门到放弃-Windows权限提升/" title="内网渗透从入门到放弃--Windows本地权限提升"><img class="cover" src="https://s1.ax1x.com/2022/04/07/LSoSQH.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-04-05</div><div class="title">内网渗透从入门到放弃--Windows本地权限提升</div></div></a></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2022 By Gard3nia</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>
